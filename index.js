@@ -1,5 +1,4 @@
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField } = require('discord.js');
-const config = require('./config.json');
 
 const client = new Client({
     intents: [
@@ -9,31 +8,33 @@ const client = new Client({
     ]
 });
 
+// Pobieramy dane z ustawień Rendera (Environment Variables)
+const prefix = "!";
+const partnerChannelId = process.env.PARTNER_CHANNEL_ID;
+const logChannelId = process.env.LOG_CHANNEL_ID;
+
 client.once('ready', () => {
-    console.log(`Bot Blondasa śmiga! Zalogowano jako: ${client.user.tag}`);
+    console.log(`Bot Blondasa na hostingu! Zalogowano jako: ${client.user.tag}`);
 });
 
 client.on('messageCreate', async (message) => {
-    if (!message.content.startsWith(config.prefix) || message.author.bot) return;
+    if (!message.content.startsWith(prefix) || message.author.bot) return;
 
-    const args = message.content.slice(config.prefix.length).trim().split(/ +/);
+    const args = message.content.slice(prefix.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
     if (command === 'partner') {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-            return message.reply("Nie masz uprawnień!");
-        }
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return;
 
-        const partnerName = args[0]; // Może być @maciejowsk (jako tekst)
-        const inviteLink = args[1];  // Link do serwera
-        const description = args.slice(2).join(" "); // Reszta to opis
+        const partnerName = args[0]; 
+        const inviteLink = args[1];
+        const description = args.slice(2).join(" ");
 
         if (!partnerName || !inviteLink || !description) {
-            return message.reply("Użycie: `!partner [Nazwa_Partnera] [Link] [Opis]`");
+            return message.reply("Użycie: `!partner [Kto] [Link] [Opis]`");
         }
 
-        const partnerChannel = client.channels.cache.get(config.partnerChannelId);
-        const logChannel = client.channels.cache.get(config.logChannelId);
+        const partnerChannel = client.channels.cache.get(partnerChannelId);
 
         const partnerEmbed = new EmbedBuilder()
             .setTitle("🤝 Nowa Współpraca!")
@@ -44,22 +45,18 @@ client.on('messageCreate', async (message) => {
                 { name: "🔗 Zaproszenie", value: `[Dołącz teraz](${inviteLink})`, inline: true },
                 { name: "👥 Partner", value: `${partnerName}`, inline: true }
             )
-            .setFooter({ text: config.footerText })
+            .setFooter({ text: "System Partnerstw - Blondas" })
             .setTimestamp();
 
         try {
             if (partnerChannel) {
                 await partnerChannel.send({ embeds: [partnerEmbed] });
-                message.reply(`✅ Wysłano partnerstwo dla **${partnerName}**!`);
-                if (logChannel) logChannel.send(`📢 **Log:** ${message.author.tag} dodał partnerstwo z **${partnerName}**.`);
-            } else {
-                message.reply("❌ Błąd: Nieprawidłowe ID kanału w config.json!");
+                await message.react('✅');
             }
         } catch (error) {
-            console.error(error);
-            message.reply("❌ Coś poszło nie tak. Sprawdź konsolę!");
+            console.error("Błąd wysyłania:", error);
         }
     }
 });
 
-client.login(config.token);
+client.login(process.env.TOKEN);
