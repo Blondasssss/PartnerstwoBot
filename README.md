@@ -1,0 +1,2 @@
+# PartnerstwoBot
+PARTNERSTWO BOT
